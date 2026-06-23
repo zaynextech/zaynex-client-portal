@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 
 import { PageContainer } from "@/components/shared/page-container";
@@ -8,8 +10,8 @@ import { columns } from "@/features/clients/columns";
 import { getClients } from "@/features/clients/actions";
 
 export default async function ClientsPage() {
-  const clients = await getClients();
-
+  const clients =
+    await getClients();
 
   return (
     <PageContainer>
@@ -17,8 +19,10 @@ export default async function ClientsPage() {
         title="Clients"
         description="Manage agency clients"
         action={
-          <Button>
-            Add Client
+          <Button asChild>
+            <Link href="/admin/clients/new">
+              Add Client
+            </Link>
           </Button>
         }
       />

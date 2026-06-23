@@ -7,7 +7,7 @@ import { GlobalSearchButton } from "@/components/shared/global-search-button";
 import { GlobalSearchDialog } from "@/components/shared/global-search-dialog";
 
 import Link from "next/link";
-import { CalendarPlus, CalendarDays } from "lucide-react";
+import { CalendarPlus, CalendarDays, ShieldAlert } from "lucide-react";
 
 interface AppHeaderProps {
   title?: string;
@@ -27,8 +27,10 @@ export async function AppHeader({
   let unreadCount = 0;
   let notificationHref = "/auth/login";
   let isAdmin = false;
+  let isOwner = false;
 
   if (user) {
+    // 1. Fetch Notification Counts
     const { count } = await supabase
       .from("notifications")
       .select("*", {
@@ -40,6 +42,7 @@ export async function AppHeader({
 
     unreadCount = count ?? 0;
 
+    // 2. Fetch User Profile Context Rollups
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -47,6 +50,7 @@ export async function AppHeader({
       .single();
 
     isAdmin = profile?.role === "ADMIN";
+    isOwner = user.email === "gkasmiro@gmail.com";
 
     notificationHref = isAdmin
       ? "/admin/notifications"
@@ -57,7 +61,7 @@ export async function AppHeader({
     <>
       <GlobalSearchDialog />
 
-      <header className="sticky top-0 z-40 h-16 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <header className="sticky top-0 z-40 h-14 sm:h-16 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-full items-center justify-between px-3 sm:px-4 md:px-6">
           
           {/* ================= LEFT CONTROLS ================= */}
@@ -66,30 +70,47 @@ export async function AppHeader({
             {sidebar && <div className="shrink-0">{sidebar}</div>}
 
             {title && (
-              <h1 className="text-base sm:text-lg font-semibold tracking-tight truncate max-w-35 sm:max-w-75 md:max-w-none">
+              <h1 className="text-sm sm:text-lg font-semibold tracking-tight truncate max-w-[140px] sm:max-w-xs md:max-w-none">
                 {title}
               </h1>
             )}
           </div>
 
           {/* ================= RIGHT CONTROLS ================= */}
-          <div className="flex items-center gap-1.5 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2.5">
             
-            {/* Desktop Action: Meetings Dashboard */}
+            {/* Action Grouping: Owner Dashboard Elements */}
+            {isOwner && (
+              <>
+                <Link
+                  href="/admin/admins"
+                  className="hidden md:flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 text-xs font-semibold tracking-tight transition-colors hover:bg-muted"
+                >
+                  Admins
+                </Link>
+                <Link
+                  href="/admin/admins"
+                  className="flex md:hidden h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  title="Admin Management"
+                >
+                  <ShieldAlert className="h-4 w-4" />
+                </Link>
+              </>
+            )}
+
+            {/* Action Grouping: Meetings Dashboards (Desktop Viewport) */}
             <Link
               href={isAdmin ? "/admin/meetings" : "/client/meetings"}
-              className="hidden md:flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              className="hidden md:flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 text-xs font-semibold tracking-tight transition-colors hover:bg-muted"
             >
-              <CalendarPlus className="h-4 w-4" />
-              Meetings
+              <CalendarPlus className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+              <span>Meetings</span>
             </Link>
 
-
-
-            {/* Mobile Action Fallbacks (Icons display only on smaller screens) */}
+            {/* Action Grouping: Meetings Shortcuts (Mobile Viewport Fallbacks) */}
             <Link
               href={isAdmin ? "/admin/meetings" : "/client/meetings"}
-              className="flex md:hidden h-9 w-9 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex md:hidden h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               title="Meetings Dashboard"
             >
               <CalendarDays className="h-4 w-4" />
@@ -98,17 +119,17 @@ export async function AppHeader({
             {!isAdmin && (
               <Link
                 href="/book-meeting"
-                className="flex md:hidden h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground transition-opacity hover:opacity-90"
+                className="flex md:hidden h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90 shadow-sm"
                 title="Book Meeting"
               >
                 <CalendarPlus className="h-4 w-4" />
               </Link>
             )}
 
-            {/* Divider Line on Mobile to separate shortcuts from utility status icons */}
-            <div className="h-4 w-px bg-border md:hidden mx-0.5" />
+            {/* Vertical Segment Divider on Mobile Viewports */}
+            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 md:hidden mx-0.5" />
 
-            {/* Core Utilities */}
+            {/* Core Global Utilities Actions Block */}
             <GlobalSearchButton />
 
             <NotificationBell
