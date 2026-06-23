@@ -34,7 +34,7 @@ export const clientColumns: ColumnDef<Project>[] = [
     header: "Progress",
     cell: ({ row }) => (
       <ProjectProgress
-        value={row.original.progress}
+        progress={row.original.progress}
       />
     ),
   },
