@@ -46,7 +46,7 @@ export async function generateInvoicePdf({
     color: primaryColor,
   });
 
-  page.drawText("info@zaynex.com\nwww.zaynex.com", {
+  page.drawText("support@zaynex.com\nwww.zaynex.com", {
     x: 50,
     y: 730,
     size: 9,

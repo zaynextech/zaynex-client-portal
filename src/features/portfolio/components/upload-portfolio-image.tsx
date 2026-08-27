@@ -1,81 +1,44 @@
 "use client";
 
 import { useState } from "react";
-
 import { Upload } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
+import { uploadPortfolioImage } from "@/features/portfolio/actions/upload-portfolio-image";
 
 interface Props {
   value: string;
-  onChange: (
-    url: string
-  ) => void;
+  onChange: (url: string) => void;
 }
 
 export function UploadPortfolioImage({
   value,
   onChange,
 }: Props) {
-  const [uploading, setUploading] =
-    useState(false);
+  const [uploading, setUploading] = useState(false);
 
   async function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>
   ) {
-    const file =
-      e.target.files?.[0];
+    const file = e.target.files?.[0];
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     try {
       setUploading(true);
 
-      const supabase =
-        createClient();
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const fileName =
-        `${Date.now()}-${file.name}`;
+      const url = await uploadPortfolioImage(formData);
 
-      const filePath =
-        `thumbnails/${fileName}`;
-
-      const { error } =
-        await supabase.storage
-          .from("portfolio")
-          .upload(
-            filePath,
-            file,
-            {
-              upsert: false,
-            }
-          );
-
-      if (error) {
-        throw error;
-      }
-
-      const { data } =
-        supabase.storage
-          .from("portfolio")
-          .getPublicUrl(
-            filePath
-          );
-
-      onChange(
-        data.publicUrl
-      );
+      onChange(url);
     } catch (error) {
-      console.error(
-        error
-      );
+      console.error("Upload failed:", error);
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   }
 
@@ -84,9 +47,8 @@ export function UploadPortfolioImage({
       <Input
         type="file"
         accept="image/*"
-        onChange={
-          handleUpload
-        }
+        onChange={handleUpload}
+        disabled={uploading}
       />
 
       {uploading && (
@@ -103,26 +65,19 @@ export function UploadPortfolioImage({
             width={800}
             height={400}
             className="h-48 w-full rounded-lg border object-cover"
-            />
-
-          <Input
-            value={value}
-            readOnly
           />
+
+          <Input value={value} readOnly />
         </div>
       )}
 
       <Button
         type="button"
         variant="outline"
-        disabled={
-          uploading
-        }
+        disabled={uploading}
       >
         <Upload className="mr-2 h-4 w-4" />
-        {uploading
-          ? "Uploading..."
-          : "Upload Image"}
+        {uploading ? "Uploading..." : "Upload Image"}
       </Button>
     </div>
   );

@@ -11,8 +11,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname:
-          "bdcmeppnvtrbbzfvjysf.supabase.co",
+        hostname: "bdcmeppnvtrbbzfvjysf.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
       },
     ],
   },

@@ -83,12 +83,13 @@ export function PortfolioTable({
                   <td className="p-4">
                     {project.thumbnail_url ? (
                       <Image
-                            src={project.thumbnail_url}
-                            alt={project.title}
-                            width={80}
-                            height={56}
-                            className="h-14 w-20 rounded border object-cover"
-                            />
+                        src={project.thumbnail_url}
+                        alt={project.title}
+                        width={80}
+                        height={56}
+                        unoptimized
+                        className="h-14 w-20 rounded border object-cover"
+                      />
                     ) : (
                       <div className="flex h-14 w-20 items-center justify-center rounded border text-xs text-muted-foreground">
                         No Image

@@ -2,17 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-
 import { createPortfolioProject } from "@/features/portfolio/actions/create-portfolio-project";
 import { updatePortfolioProject } from "@/features/portfolio/actions/update-portfolio-project";
 import { UploadPortfolioImage } from "./upload-portfolio-image";
 import { UploadPortfolioGallery } from "./upload-portfolio-gallery";
-
 
 interface PortfolioProject {
   id: string;
@@ -32,123 +29,107 @@ interface Props {
   project?: PortfolioProject | null;
 }
 
-export function PortfolioForm({
-  project,
-}: Props) {
-  const router =
-    useRouter();
+function generateSlug(title: string) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
 
-  const [loading, setLoading] =
-    useState(false);
+export function PortfolioForm({ project }: Props) {
+  const router = useRouter();
 
-  const [title, setTitle] =
-    useState(
-      project?.title ?? ""
-    );
+  const [loading, setLoading] = useState(false);
 
-  const [slug, setSlug] =
-    useState(
-      project?.slug ?? ""
-    );
+  const [title, setTitle] = useState(project?.title ?? "");
 
-  const [category, setCategory] =
-    useState(
-      project?.category ?? ""
-    );
-
-  const [
-    shortDescription,
-    setShortDescription,
-  ] = useState(
-    project?.short_description ??
-      ""
+  const [slug, setSlug] = useState(
+    project?.slug ?? ""
   );
 
-  const [
-    fullDescription,
-    setFullDescription,
-  ] = useState(
-    project?.full_description ??
-      ""
+  const [category, setCategory] = useState(
+    project?.category ?? ""
   );
 
-  const [
-    thumbnailUrl,
-    setThumbnailUrl,
-  ] = useState(
-    project?.thumbnail_url ??
-      ""
+  const [shortDescription, setShortDescription] = useState(
+    project?.short_description ?? ""
   );
 
-  const [gallery, setGallery] =
-  useState<string[]>(
+  const [fullDescription, setFullDescription] = useState(
+    project?.full_description ?? ""
+  );
+
+  const [thumbnailUrl, setThumbnailUrl] = useState(
+    project?.thumbnail_url ?? ""
+  );
+
+  const [gallery, setGallery] = useState<string[]>(
     project?.gallery ?? []
   );
 
-  const [demoUrl, setDemoUrl] =
-    useState(
-      project?.demo_url ?? ""
-    );
+  const [demoUrl, setDemoUrl] = useState(
+    project?.demo_url ?? ""
+  );
 
-  const [featured, setFeatured] =
-    useState(
-      project?.featured ??
-        false
-    );
+  const [featured, setFeatured] = useState(
+    project?.featured ?? false
+  );
 
-  const [published, setPublished] =
-    useState(
-      project?.published ??
-        true
-    );
-    
+  const [published, setPublished] = useState(
+    project?.published ?? true
+  );
 
-  async function handleSubmit(
-    e: React.FormEvent
+  function handleTitleChange(
+    e: React.ChangeEvent<HTMLInputElement>
   ) {
+    const newTitle = e.target.value;
+
+    setTitle(newTitle);
+
+    // Automatically generate slug
+    setSlug(generateSlug(newTitle));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     try {
       setLoading(true);
 
+      const finalSlug = generateSlug(title);
+
       if (project) {
         await updatePortfolioProject({
-  id: project.id,
-  title,
-  slug,
-  category,
-  short_description:
-    shortDescription,
-  full_description:
-    fullDescription,
-  thumbnail_url:
-    thumbnailUrl,
-  gallery,
-  demo_url: demoUrl,
-  featured,
-  published,
-});
+          id: project.id,
+          title,
+          slug: finalSlug,
+          category,
+          short_description: shortDescription,
+          full_description: fullDescription,
+          thumbnail_url: thumbnailUrl,
+          gallery,
+          demo_url: demoUrl,
+          featured,
+          published,
+        });
       } else {
         await createPortfolioProject({
-            title,
-            slug,
-            category,
-            short_description:
-              shortDescription,
-            full_description:
-              fullDescription,
-            thumbnail_url:
-              thumbnailUrl,
-            gallery,
-            demo_url: demoUrl,
-            featured,
-            published,
-          });
+          title,
+          slug: finalSlug,
+          category,
+          short_description: shortDescription,
+          full_description: fullDescription,
+          thumbnail_url: thumbnailUrl,
+          gallery,
+          demo_url: demoUrl,
+          featured,
+          published,
+        });
       }
 
-      router.push(
-        "/admin/portfolio"
-      );
+      router.push("/admin/portfolio");
       router.refresh();
     } finally {
       setLoading(false);
@@ -157,134 +138,93 @@ export function PortfolioForm({
 
   return (
     <form
-      onSubmit={
-        handleSubmit
-      }
+      onSubmit={handleSubmit}
       className="space-y-6"
     >
       <div className="grid gap-4 md:grid-cols-2">
         <Input
           placeholder="Project Title"
           value={title}
-          onChange={(e) =>
-            setTitle(
-              e.target.value
-            )
-          }
+          onChange={handleTitleChange}
           required
         />
 
         <Input
           placeholder="Slug"
           value={slug}
-          onChange={(e) =>
-            setSlug(
-              e.target.value
-            )
-          }
-          required
+          readOnly
+          className="bg-muted"
         />
       </div>
 
       <Input
         placeholder="Category"
         value={category}
-        onChange={(e) =>
-          setCategory(
-            e.target.value
-          )
-        }
+        onChange={(e) => setCategory(e.target.value)}
         required
       />
 
       <Textarea
         placeholder="Short Description"
-        value={
-          shortDescription
-        }
+        value={shortDescription}
         onChange={(e) =>
-          setShortDescription(
-            e.target.value
-          )
+          setShortDescription(e.target.value)
         }
       />
 
       <Textarea
         placeholder="Full Description"
-        value={
-          fullDescription
-        }
+        value={fullDescription}
         onChange={(e) =>
-          setFullDescription(
-            e.target.value
-          )
+          setFullDescription(e.target.value)
         }
         rows={8}
       />
 
-      {/* Thumbnail Image */}
-<div className="space-y-2">
-  <p className="text-sm font-medium">
-    Thumbnail Image
-  </p>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">
+          Thumbnail Image
+        </p>
 
-  <UploadPortfolioImage
-    value={thumbnailUrl}
-    onChange={setThumbnailUrl}
-  />
-</div>
+        <UploadPortfolioImage
+          value={thumbnailUrl}
+          onChange={setThumbnailUrl}
+        />
+      </div>
 
-{/* Gallery Images */}
-<div className="space-y-2">
-  <p className="text-sm font-medium">
-    Gallery Images
-  </p>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">
+          Gallery Images
+        </p>
 
-  <UploadPortfolioGallery
-    value={gallery}
-    onChange={setGallery}
-  />
-</div>
-
+        <UploadPortfolioGallery
+          value={gallery}
+          onChange={setGallery}
+        />
+      </div>
 
       <Input
         placeholder="Live Demo URL"
         value={demoUrl}
-        onChange={(e) =>
-          setDemoUrl(
-            e.target.value
-          )
-        }
+        onChange={(e) => setDemoUrl(e.target.value)}
       />
 
       <div className="flex flex-col gap-4 rounded-lg border p-4">
         <div className="flex items-center justify-between">
-          <span>
-            Featured Project
-          </span>
+          <span>Featured Project</span>
 
           <Switch
-            checked={
-              featured
-            }
-            onCheckedChange={
-              setFeatured
-            }
+            checked={featured}
+            onCheckedChange={setFeatured}
           />
         </div>
 
         <div className="flex items-center justify-between">
-          <span>
-            Published
-          </span>
+          <span>Published</span>
 
           <Switch
-            checked={
-              published
-            }
-            onCheckedChange={
-              setPublished
-            }
+            checked={published}
+            onCheckedChange={setPublished}
           />
         </div>
       </div>

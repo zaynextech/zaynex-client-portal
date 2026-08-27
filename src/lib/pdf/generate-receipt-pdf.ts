@@ -42,7 +42,7 @@ export async function generateReceiptPdf({
     color: primaryColor,
   });
 
-  page.drawText("billing@zaynex.com\nwww.zaynex.com", {
+  page.drawText("support@zaynex.com\nwww.zaynex.com", {
     x: 50,
     y: 730,
     size: 9,
