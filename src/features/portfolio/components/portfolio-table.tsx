@@ -137,8 +137,9 @@ export function PortfolioTable({
                         variant="outline"
                       >
                         <Link
-                          href={`/portfolio/${project.slug}`}
+                          href={`https://www.zaynex.tech/portfolio/${project.slug}`}
                           target="_blank"
+                          rel="noopener noreferrer"
                         >
                           <Eye className="h-4 w-4" />
                         </Link>
