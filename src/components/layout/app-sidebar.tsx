@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
 import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
   LayoutDashboard,
   Users,
   FolderKanban,
@@ -43,13 +44,33 @@ const icons = {
 } as const;
 
 interface AppSidebarProps {
-  title: string;
+  title?: string;
   items: readonly NavItem[];
 }
 
 export function AppSidebar({ items }: AppSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isFolded, setIsFolded] = useState(false);
+  
+  // useTransition manages pending route transitions natively without useEffect
+  const [isPending, startTransition] = useTransition();
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+    // Ignore modified clicks (new tab, middle click, etc.)
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    
+    // Ignore if already on the active page
+    if (pathname === url) return;
+
+    e.preventDefault();
+    setPendingUrl(url);
+
+    startTransition(() => {
+      router.push(url);
+    });
+  };
 
   return (
     <motion.aside
@@ -59,16 +80,17 @@ export function AppSidebar({ items }: AppSidebarProps) {
       className="hidden h-screen flex-col border-r bg-background md:flex relative shrink-0"
     >
       {/* Sidebar Header Section */}
-      <div className={cn(
-        "flex h-16 items-center border-b px-4 transition-all duration-200 relative",
-        isFolded ? "justify-center" : "justify-between"
-      )}>
-        {/* Adaptive Logo containing internal structural animations */}
+      <div
+        className={cn(
+          "flex h-16 items-center border-b px-4 transition-all duration-200 relative",
+          isFolded ? "justify-center" : "justify-between"
+        )}
+      >
         <Logo isFolded={isFolded} />
 
-        {/* Collapse Toggle Button - visible only when expanded */}
         {!isFolded && (
           <button
+            type="button"
             onClick={() => setIsFolded(true)}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-accent ml-2 cursor-pointer"
             aria-label="Collapse Sidebar"
@@ -78,11 +100,12 @@ export function AppSidebar({ items }: AppSidebarProps) {
         )}
       </div>
 
-      {/* Floating Expand Toggle Button - Positioned outside container limits to bypass overflow clipping */}
+      {/* Floating Expand Toggle Button */}
       {isFolded && (
         <button
+          type="button"
           onClick={() => setIsFolded(false)}
-          className="absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:bg-accent hover:text-accent-foreground active:scale-95 cursor-pointer"
+          className="absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border bg-background shadow-md transition-all hover:bg-accent hover:text-accent-foreground active:scale-95 cursor-pointer"
           aria-label="Expand Sidebar"
         >
           <ChevronRight size={12} />
@@ -94,22 +117,37 @@ export function AppSidebar({ items }: AppSidebarProps) {
         {items.map((item) => {
           const Icon = icons[item.icon];
           const active = pathname === item.url || pathname.startsWith(`${item.url}/`);
+          const isLoading = isPending && pendingUrl === item.url;
 
           return (
             <Link
               key={item.url}
               href={item.url}
+              onClick={(e) => handleLinkClick(e, item.url)}
               className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative",
-                active 
-                  ? "bg-primary text-primary-foreground shadow-sm" 
-                  : "hover:bg-muted  hover:text-foreground",
+                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative select-none",
+                active
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "hover:bg-muted hover:text-foreground",
+                isLoading && "opacity-80 pointer-events-none",
                 isFolded && "justify-center px-0 h-10 w-10 mx-auto"
               )}
               title={isFolded ? item.title : undefined}
             >
-              <Icon className={cn("h-4 w-4 shrink-0", isFolded && "h-5 w-5")} />
+              {/* Dynamic Icon / Spinner Switch */}
+              {isLoading ? (
+                <Loader2
+                  className={cn(
+                    "h-4 w-4 shrink-0 animate-spin text-cyan-500",
+                    active && "text-primary-foreground",
+                    isFolded && "h-5 w-5"
+                  )}
+                />
+              ) : (
+                <Icon className={cn("h-4 w-4 shrink-0", isFolded && "h-5 w-5")} />
+              )}
 
+              {/* Title & Loading Text Display */}
               <AnimatePresence mode="wait">
                 {!isFolded && (
                   <motion.span
@@ -117,7 +155,7 @@ export function AppSidebar({ items }: AppSidebarProps) {
                     animate={{ opacity: 1, width: "auto" }}
                     exit={{ opacity: 0, width: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="truncate whitespace-nowrap select-none"
+                    className="truncate whitespace-nowrap"
                   >
                     {item.title}
                   </motion.span>

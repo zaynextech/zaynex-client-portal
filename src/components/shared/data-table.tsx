@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-
 import {
   ColumnDef,
   SortingState,
@@ -12,9 +11,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { Search, X, ChevronLeft, ChevronRight, Loader2, Inbox } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-
 import {
   Table,
   TableBody,
@@ -23,19 +22,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Button } from "@/components/ui/button";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchPlaceholder?: string;
+  isLoading?: boolean;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = "Search records...",
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
@@ -43,15 +43,12 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns,
-
     state: {
       sorting,
       globalFilter,
     },
-
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
-
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -59,30 +56,46 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className="space-y-4 w-full min-w-0">
-      {/* 
-        Responsive Search Input: 
-        Takes full width on mobile screens, caps at max-w-sm on desktop.
-      */}
-      <Input
-        placeholder={searchPlaceholder}
-        value={globalFilter}
-        onChange={(e) => setGlobalFilter(e.target.value)}
-        className="w-full md:max-w-sm"
-      />
+    <div className="w-full space-y-3.5 min-w-0 font-sans">
+      {/* ─── SEARCH & FILTER CONTROLS ─── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder={searchPlaceholder}
+            value={globalFilter ?? ""}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="h-9.5 pl-9 pr-8 text-xs bg-background border-border/80 rounded-xl focus-visible:ring-1 focus-visible:ring-cyan-500"
+          />
+          {globalFilter && (
+            <button
+              type="button"
+              onClick={() => setGlobalFilter("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
+              aria-label="Clear filter"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
 
-      {/* 
-        Horizontal Scroll Protection Wrapper:
-        - overflow-x-auto handles column overflow cleanly inside the card framework.
-        - w-full and min-w-0 stops any layout breakdown parent calculations.
-      */}
-      <div className="w-full overflow-x-auto rounded-xl border bg-card min-w-0">
-        <Table className="whitespace-nowrap">
-          <TableHeader>
+        {/* Total Records Counter */}
+        <div className="hidden sm:block text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
+          {table.getFilteredRowModel().rows.length} Total Records
+        </div>
+      </div>
+
+      {/* ─── DATA TABLE CONTAINER ─── */}
+      <div className="w-full overflow-x-auto rounded-2xl border border-border/80 bg-card min-w-0 shadow-xs">
+        <Table className="whitespace-nowrap text-xs">
+          <TableHeader className="bg-muted/40 border-b border-border/70">
             {table.getHeaderGroups().map((group) => (
-              <TableRow key={group.id}>
+              <TableRow key={group.id} className="hover:bg-transparent">
                 {group.headers.map((header) => (
-                  <TableHead key={header.id} className="px-4 py-3">
+                  <TableHead
+                    key={header.id}
+                    className="h-10 px-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground select-none"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -96,11 +109,30 @@ export function DataTable<TData, TValue>({
           </TableHeader>
 
           <TableBody>
-            {table.getRowModel().rows.length ? (
+            {isLoading ? (
+              /* Loading State */
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-40 text-center"
+                >
+                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
+                    <span className="font-mono text-xs uppercase tracking-widest text-zinc-500">
+                      Loading data...
+                    </span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows.length ? (
+              /* Rows Display */
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="border-b border-border/40 transition-colors hover:bg-muted/30"
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-3">
+                    <TableCell key={cell.id} className="px-4 py-3 text-foreground font-medium">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -110,12 +142,17 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))
             ) : (
+              /* Empty Search / Empty Data State */
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-36 text-center"
                 >
-                  No results found.
+                  <div className="flex flex-col items-center justify-center gap-1.5 text-muted-foreground">
+                    <Inbox className="h-6 w-6 stroke-[1.5] text-muted-foreground/60" />
+                    <span className="text-xs font-semibold text-foreground">No records found</span>
+                    <span className="text-[11px] text-muted-foreground">Try adjusting your search filters</span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -123,35 +160,34 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* 
-        Responsive Pagination Controls:
-        Splits columns dynamically on phones, sticks to the right side on monitors.
-      */}
-      <div className="flex items-center justify-between sm:justify-end gap-2 px-1">
-        <div className="text-xs text-muted-foreground flex-1 sm:flex-none">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount() || 1}
+      {/* ─── PAGINATION CONTROLS ─── */}
+      <div className="flex items-center justify-between gap-3 px-1 pt-0.5">
+        <div className="text-[11px] font-mono text-muted-foreground">
+          Page <span className="font-bold text-foreground">{table.getState().pagination.pageIndex + 1}</span> of{" "}
+          <span className="font-bold text-foreground">{table.getPageCount() || 1}</span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="h-8 select-none"
+            disabled={!table.getCanPreviousPage() || isLoading}
+            className="h-8.5 px-3 text-xs rounded-xl border-border/80 hover:bg-accent cursor-pointer select-none gap-1"
           >
-            Previous
+            <ChevronLeft size={13} />
+            <span className="hidden xs:inline">Previous</span>
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="h-8 select-none"
+            disabled={!table.getCanNextPage() || isLoading}
+            className="h-8.5 px-3 text-xs rounded-xl border-border/80 hover:bg-accent cursor-pointer select-none gap-1"
           >
-            Next
+            <span className="hidden xs:inline">Next</span>
+            <ChevronRight size={13} />
           </Button>
         </div>
       </div>

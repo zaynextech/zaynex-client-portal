@@ -1,8 +1,4 @@
-import {
-  PDFDocument,
-  StandardFonts,
-  rgb,
-} from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 interface GenerateInvoicePdfProps {
   invoiceNumber: string;
@@ -24,169 +20,239 @@ export async function generateInvoicePdf({
   notes,
 }: GenerateInvoicePdfProps) {
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595, 842]); // A4 dimensions
+  const page = pdf.addPage([595.28, 841.89]); // Standard A4 Dimensions
 
-  // 1. Embed Fonts
+  // Embed Helvetica fonts
   const fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-  // 2. Color Palette Definitions
-  const primaryColor = rgb(0.118, 0.161, 0.231); // Slate 800 (#1E293B)
-  const secondaryColor = rgb(0.278, 0.333, 0.412); // Slate 600 (#475569)
-  const lightBgColor = rgb(0.961, 0.969, 0.98); // Light gray (#F5F7FA)
-  const borderLineColor = rgb(0.88, 0.89, 0.92);
+  // Theme Colors
+  const textDark = rgb(0.09, 0.09, 0.11); // Zinc-900 (#18181B)
+  const textMuted = rgb(0.44, 0.44, 0.49); // Zinc-500 (#71717A)
+  const cyanBrand = rgb(0.024, 0.714, 0.831); // Cyan-500 (#06B6D4)
+  const lightBg = rgb(0.97, 0.97, 0.98); // Light gray row background (#F8FAFC)
+  const borderLine = rgb(0.89, 0.91, 0.94); // Border separator (#E2E8F0)
+  const white = rgb(1, 1, 1);
 
-  // --- HEADER SECTION ---
-  // Company Logo / Brand Name
-  page.drawText("ZAYNEX", {
-    x: 50,
-    y: 760,
-    size: 26,
-    font: fontBold,
-    color: primaryColor,
+  // -------------------------------------------------------------
+  // HEADER SECTION: LOGO + COMPANY INFO
+  // -------------------------------------------------------------
+  const logoX = 50;
+  const logoY = 750;
+
+  // 1. Draw Geometric Wireframe Mark (Matching Logo.tsx)
+  // Top-left dark square
+  page.drawRectangle({
+    x: logoX,
+    y: logoY + 6,
+    width: 14,
+    height: 14,
+    borderWidth: 1.8,
+    borderColor: textDark,
+    color: white,
   });
 
+  // Bottom-right cyan square (overlapping)
+  page.drawRectangle({
+    x: logoX + 6,
+    y: logoY,
+    width: 14,
+    height: 14,
+    borderWidth: 1.8,
+    borderColor: cyanBrand,
+    color: white,
+  });
+
+  // Re-draw overlapping lines for depth
+  page.drawRectangle({
+    x: logoX,
+    y: logoY + 6,
+    width: 14,
+    height: 14,
+    borderWidth: 1.8,
+    borderColor: textDark,
+    borderOpacity: 1,
+    opacity: 0,
+  });
+
+  // 2. Logo Typography "Zaynex"
+  page.drawText("Zaynex", {
+    x: logoX + 26,
+    y: logoY + 2,
+    size: 18,
+    font: fontBold,
+    color: textDark,
+  });
+
+  // Company contact details
   page.drawText("support@zaynex.com\nwww.zaynex.com", {
-    x: 50,
-    y: 730,
+    x: logoX,
+    y: logoY - 22,
     size: 9,
     font: fontRegular,
-    color: secondaryColor,
-    lineHeight: 12,
+    color: textMuted,
+    lineHeight: 13,
   });
 
-  // Invoice Meta Title (Right Aligned Concept)
+  // -------------------------------------------------------------
+  // INVOICE META (RIGHT-ALIGNED)
+  // -------------------------------------------------------------
   page.drawText("INVOICE", {
-    x: 430,
-    y: 760,
-    size: 26,
+    x: 410,
+    y: logoY + 2,
+    size: 20,
     font: fontBold,
-    color: primaryColor,
+    color: textDark,
   });
 
-  // Invoice details box (Right side)
-  const detailsY = 730;
-  page.drawText(`Invoice #:`, { x: 430, y: detailsY, size: 10, font: fontBold, color: primaryColor });
-  page.drawText(invoiceNumber, { x: 500, y: detailsY, size: 10, font: fontRegular, color: secondaryColor });
+  const metaStartY = logoY - 20;
+  const metaLabelX = 410;
+  const metaValueX = 480;
 
-  page.drawText(`Date:`, { x: 430, y: detailsY - 15, size: 10, font: fontBold, color: primaryColor });
-  page.drawText(issueDate, { x: 500, y: detailsY - 15, size: 10, font: fontRegular, color: secondaryColor });
+  // Invoice #
+  page.drawText("Invoice #:", { x: metaLabelX, y: metaStartY, size: 9, font: fontBold, color: textDark });
+  page.drawText(invoiceNumber, { x: metaValueX, y: metaStartY, size: 9, font: fontRegular, color: textMuted });
 
-  page.drawText(`Due Date:`, { x: 430, y: detailsY - 30, size: 10, font: fontBold, color: primaryColor });
-  page.drawText(dueDate || "Upon Receipt", { x: 500, y: detailsY - 30, size: 10, font: fontRegular, color: secondaryColor });
+  // Issue Date
+  page.drawText("Date:", { x: metaLabelX, y: metaStartY - 14, size: 9, font: fontBold, color: textDark });
+  page.drawText(issueDate, { x: metaValueX, y: metaStartY - 14, size: 9, font: fontRegular, color: textMuted });
+
+  // Due Date
+  page.drawText("Due Date:", { x: metaLabelX, y: metaStartY - 28, size: 9, font: fontBold, color: textDark });
+  page.drawText(dueDate || "Upon Receipt", { x: metaValueX, y: metaStartY - 28, size: 9, font: fontRegular, color: textMuted });
 
   // Divider Line
   page.drawLine({
-    start: { x: 50, y: 670 },
-    end: { x: 545, y: 670 },
+    start: { x: 50, y: 675 },
+    end: { x: 545, y: 675 },
     thickness: 1,
-    color: borderLineColor,
+    color: borderLine,
   });
 
-  // --- BILL TO SECTION ---
-  page.drawText("BILL TO", {
+  // -------------------------------------------------------------
+  // BILL TO SECTION
+  // -------------------------------------------------------------
+  page.drawText("BILLED TO", {
     x: 50,
-    y: 645,
-    size: 10,
+    y: 650,
+    size: 9,
     font: fontBold,
-    color: secondaryColor,
+    color: textMuted,
   });
 
   page.drawText(clientName, {
     x: 50,
-    y: 625,
-    size: 14,
+    y: 632,
+    size: 13,
     font: fontBold,
-    color: primaryColor,
+    color: textDark,
   });
 
-  // --- LINE ITEMS TABLE ---
-  const tableY = 560;
+  // -------------------------------------------------------------
+  // LINE ITEMS TABLE
+  // -------------------------------------------------------------
+  const tableY = 575;
+  const tableWidth = 495;
 
-  // Table Header Background
+  // Table Header Box
   page.drawRectangle({
     x: 50,
     y: tableY,
-    width: 495,
-    height: 25,
-    color: primaryColor,
+    width: tableWidth,
+    height: 24,
+    color: textDark,
   });
 
-  // Table Headers text
-  page.drawText("Description", { x: 60, y: tableY + 7, size: 10, font: fontBold, color: rgb(1, 1, 1) });
-  page.drawText("Quantity", { x: 340, y: tableY + 7, size: 10, font: fontBold, color: rgb(1, 1, 1) });
-  page.drawText("Total Price", { x: 475, y: tableY + 7, size: 10, font: fontBold, color: rgb(1, 1, 1) });
+  // Table Column Labels
+  page.drawText("Description", { x: 62, y: tableY + 7, size: 9, font: fontBold, color: white });
+  page.drawText("Qty", { x: 360, y: tableY + 7, size: 9, font: fontBold, color: white });
+  page.drawText("Amount", { x: 475, y: tableY + 7, size: 9, font: fontBold, color: white });
 
-  // Row 1 Data (Shaded background for table entry)
+  // Item Row Box
+  const rowHeight = 40;
+  const rowY = tableY - rowHeight;
+
   page.drawRectangle({
     x: 50,
-    y: tableY - 35,
-    width: 495,
-    height: 35,
-    color: lightBgColor,
+    y: rowY,
+    width: tableWidth,
+    height: rowHeight,
+    color: lightBg,
   });
 
-  // Project item description
-  page.drawText(projectName, { x: 60, y: tableY - 22, size: 10, font: fontBold, color: primaryColor });
-  page.drawText("Professional Services Rendered", { x: 60, y: tableY - 32, size: 8, font: fontRegular, color: secondaryColor });
-  
-  // Qty
-  page.drawText("1", { x: 355, y: tableY - 22, size: 10, font: fontRegular, color: primaryColor });
-  
-  // Total (Right justified matching Header position)
-  const dynamicAmountStr = `$${amount.toFixed(2)}`;
-  page.drawText(dynamicAmountStr, { x: 475, y: tableY - 22, size: 10, font: fontRegular, color: primaryColor });
-
-  // --- FINANCIAL SUMMARY ---
-  const summaryY = tableY - 80;
-  
-  // Calculations
-  const taxRate = 0.10; // 10% example corporate tax rate
-  const taxAmount = amount * taxRate;
-  const grandTotal = amount + taxAmount;
-
-  // Subtotal Row
-  page.drawText("Subtotal:", { x: 390, y: summaryY, size: 10, font: fontRegular, color: secondaryColor });
-  page.drawText(`$${amount.toFixed(2)}`, { x: 475, y: summaryY, size: 10, font: fontRegular, color: primaryColor });
-
-  // Tax Row
-  page.drawText("Tax (10%):", { x: 390, y: summaryY - 20, size: 10, font: fontRegular, color: secondaryColor });
-  page.drawText(`$${taxAmount.toFixed(2)}`, { x: 475, y: summaryY - 20, size: 10, font: fontRegular, color: primaryColor });
-
-  // Divider for Total
+  // Row Separator Border
   page.drawLine({
-    start: { x: 390, y: summaryY - 30 },
-    end: { x: 545, y: summaryY - 30 },
+    start: { x: 50, y: rowY },
+    end: { x: 545, y: rowY },
     thickness: 1,
-    color: borderLineColor,
+    color: borderLine,
   });
 
-  // Balance Due Row
-  page.drawText("Total Due:", { x: 390, y: summaryY - 48, size: 12, font: fontBold, color: primaryColor });
-  page.drawText(`$${grandTotal.toFixed(2)}`, { x: 475, y: summaryY - 48, size: 12, font: fontBold, color: primaryColor });
+  // Item Details
+  page.drawText(projectName, { x: 62, y: rowY + 24, size: 9.5, font: fontBold, color: textDark });
+  page.drawText("Professional Services & Deliverables", { x: 62, y: rowY + 11, size: 8, font: fontRegular, color: textMuted });
 
-  // --- NOTES & FOOTER ---
+  // Qty
+  page.drawText("1", { x: 365, y: rowY + 18, size: 9, font: fontRegular, color: textDark });
+
+  // Total
+  const formattedAmount = `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  page.drawText(formattedAmount, { x: 475, y: rowY + 18, size: 9.5, font: fontBold, color: textDark });
+
+  // -------------------------------------------------------------
+  // FINANCIAL SUMMARY (SUBTOTAL & TOTAL)
+  // -------------------------------------------------------------
+  const summaryY = rowY - 35;
+  const summaryLabelX = 370;
+  const summaryValueX = 475;
+
+  // Subtotal
+  page.drawText("Subtotal:", { x: summaryLabelX, y: summaryY, size: 9.5, font: fontRegular, color: textMuted });
+  page.drawText(formattedAmount, { x: summaryValueX, y: summaryY, size: 9.5, font: fontRegular, color: textDark });
+
+  // Divider Line
+  page.drawLine({
+    start: { x: 370, y: summaryY - 12 },
+    end: { x: 545, y: summaryY - 12 },
+    thickness: 1,
+    color: borderLine,
+  });
+
+  // Total Due
+  page.drawText("Total Due:", { x: summaryLabelX, y: summaryY - 28, size: 11, font: fontBold, color: textDark });
+  page.drawText(formattedAmount, { x: summaryValueX, y: summaryY - 28, size: 11, font: fontBold, color: cyanBrand });
+
+  // -------------------------------------------------------------
+  // NOTES & FOOTER
+  // -------------------------------------------------------------
   if (notes) {
-    const notesY = summaryY - 110;
-    page.drawText("Notes & Payment Instructions", { x: 50, y: notesY, size: 10, font: fontBold, color: primaryColor });
+    const notesY = summaryY - 80;
+    page.drawText("Notes & Payment Terms", { x: 50, y: notesY, size: 9, font: fontBold, color: textDark });
     page.drawText(notes, {
       x: 50,
       y: notesY - 15,
-      size: 9,
+      size: 8.5,
       font: fontRegular,
-      color: secondaryColor,
-      maxWidth: 300,
-      lineHeight: 13,
+      color: textMuted,
+      maxWidth: 320,
+      lineHeight: 12,
     });
   }
 
-  // Sticky Footer
-  page.drawText("Thank you for choosing Zaynex. We appreciate your business!", {
+  // Footer Line
+  page.drawLine({
+    start: { x: 50, y: 65 },
+    end: { x: 545, y: 65 },
+    thickness: 0.75,
+    color: borderLine,
+  });
+
+  page.drawText("Thank you for your partnership with Zaynex.", {
     x: 50,
-    y: 50,
-    size: 9,
+    y: 48,
+    size: 8.5,
     font: fontRegular,
-    color: secondaryColor,
+    color: textMuted,
   });
 
   return await pdf.save();
