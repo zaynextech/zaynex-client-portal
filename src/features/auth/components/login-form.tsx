@@ -7,8 +7,9 @@ import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Logo } from "@/components/ui/Logo"; // Adjust path if necessary
+import { Logo } from "@/components/ui/Logo";
 import { createClient } from "@/lib/supabase/client";
+
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -20,43 +21,66 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      toast.error("Please enter your email and password");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
 
       if (error) {
         toast.error(error.message);
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
+      if (!data.user) {
+        toast.error("User account not found");
+        return;
+      }
+
+      const { data: profile, error: profileError } =
+        await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
 
       if (profileError || !profile) {
         toast.error("Profile not found");
         return;
       }
 
-      toast.success("Login successful");
 
-      if (profile.role === "ADMIN") {
-        window.location.href = "/admin";
-        return;
-      }
+toast.success("Login successful");
 
-      if (profile.role === "CLIENT") {
-        window.location.href = "/client";
-        return;
-      }
+switch (profile.role?.toUpperCase()) {
+  case "ADMIN":
+    window.location.href = "/admin";
+    return;
 
-      toast.error("Invalid user role");
+  case "DEVELOPER":
+    window.location.href = "/developer";
+    return;
+
+      case "SELLER":
+      window.location.href = "/sales";
+      return;
+
+  case "CLIENT":
+    window.location.href = "/client";
+    return;
+
+  default:
+    toast.error("Invalid user role");
+    return;
+}
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong");
@@ -66,48 +90,78 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 bg-background text-foreground transition-colors duration-200">
-      <div className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
-        
-        {/* LOGO AND HEADER WRAPPER */}
-        <div className="flex flex-col items-center text-center space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground transition-colors duration-200">
+      <div className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+
+        {/* LOGO + HEADER */}
+        <div className="flex flex-col items-center space-y-4 text-center">
           <Logo isFolded={false} />
-          
+
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight">
               Welcome Back
             </h1>
+
             <p className="text-sm text-muted-foreground">
               Sign in to your account
             </p>
           </div>
         </div>
 
-        {/* INPUT FIELDS SECTION */}
+        {/* FORM */}
         <div className="space-y-4">
+
+          {/* EMAIL */}
           <Input
             type="email"
             placeholder="Email"
             className="rounded-xl"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleLogin();
+              }
+            }}
           />
 
-          {/* PASSWORD FIELD WITH TOGGLE EYE */}
+          {/* PASSWORD */}
           <div className="relative">
             <Input
-              type={showPassword ? "text" : "password"}
+              type={
+                showPassword
+                  ? "text"
+                  : "password"
+              }
               placeholder="Password"
               className="rounded-xl pr-10"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleLogin();
+                }
+              }}
             />
+
             <button
               type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() =>
+                setShowPassword(
+                  (prev) => !prev
+                )
+              }
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
               tabIndex={-1}
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={
+                showPassword
+                  ? "Hide password"
+                  : "Show password"
+              }
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" />
@@ -117,15 +171,21 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* REMEMBER ME & FORGOT PASSWORD */}
+          {/* REMEMBER + FORGOT */}
           <div className="flex items-center justify-between text-xs">
-            <label className="flex items-center gap-2 cursor-pointer select-none text-muted-foreground hover:text-foreground transition-colors">
+
+            <label className="flex cursor-pointer select-none items-center gap-2 text-muted-foreground transition-colors hover:text-foreground">
               <input
                 type="checkbox"
                 checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                onChange={(e) =>
+                  setRememberMe(
+                    e.target.checked
+                  )
+                }
+                className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
               />
+
               <span>Remember me</span>
             </label>
 
@@ -137,20 +197,27 @@ export default function LoginPage() {
             </Link>
           </div>
 
+          {/* SIGN IN */}
           <Button
-            className="w-full h-10 rounded-xl font-semibold transition-all active:scale-[0.99]"
+            className="h-10 w-full rounded-xl font-semibold transition-all active:scale-[0.99]"
             disabled={loading}
             onClick={handleLogin}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading
+              ? "Signing in..."
+              : "Sign In"}
           </Button>
 
-          <div className="text-center pt-2">
+          {/* SIGN UP */}
+          <div className="pt-2 text-center">
             <Link
               href="/auth/signup"
-              className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
             >
-              Don&apos;t have an account? <span className="text-primary font-medium">Sign up</span>
+              Don&apos;t have an account?{" "}
+              <span className="font-medium text-primary">
+                Sign up
+              </span>
             </Link>
           </div>
         </div>

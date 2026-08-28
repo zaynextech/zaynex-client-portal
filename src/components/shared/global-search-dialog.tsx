@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-} from "react";
-
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -16,33 +12,67 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
-export function GlobalSearchDialog() {
-  const router =
-    useRouter();
+import { createClient } from "@/lib/supabase/client";
 
-  const [open, setOpen] =
-    useState(false);
+type UserRole =
+  | "ADMIN"
+  | "DEVELOPER"
+  | "SELLER"
+  | "CLIENT";
+
+interface SearchItem {
+  label: string;
+  href: string;
+}
+
+export function GlobalSearchDialog() {
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [open, setOpen] = useState(false);
+  const [role, setRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    const handleKeyboard = (
-      e: KeyboardEvent
-    ) => {
-      if (
-        e.key.toLowerCase() ===
-          "k" &&
-        (e.ctrlKey ||
-          e.metaKey)
-      ) {
-        e.preventDefault();
+    const loadRole = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        setOpen(
-          (prev) => !prev
+      if (!user) {
+        setRole(null);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.role) {
+        setRole(
+          profile.role.toUpperCase() as UserRole
         );
       }
     };
 
-    const handleOpen = () =>
+    loadRole();
+  }, [supabase]);
+
+  useEffect(() => {
+    const handleKeyboard = (e: KeyboardEvent) => {
+      if (
+        e.key.toLowerCase() === "k" &&
+        (e.ctrlKey || e.metaKey)
+      ) {
+        e.preventDefault();
+        setOpen((prev) => !prev);
+      }
+    };
+
+    const handleOpen = () => {
       setOpen(true);
+    };
 
     document.addEventListener(
       "keydown",
@@ -67,20 +97,124 @@ export function GlobalSearchDialog() {
     };
   }, []);
 
-  const navigate = (
-    href: string
-  ) => {
+  const navigate = (href: string) => {
     router.push(href);
-
     setOpen(false);
   };
+
+  const getSearchItems = (): SearchItem[] => {
+    switch (role) {
+      case "ADMIN":
+        return [
+          {
+            label: "Projects",
+            href: "/admin/projects",
+          },
+          {
+            label: "Clients",
+            href: "/admin/clients",
+          },
+          {
+            label: "Invoices",
+            href: "/admin/invoices",
+          },
+          {
+            label: "Support Tickets",
+            href: "/admin/tickets",
+          },
+          {
+            label: "Analytics",
+            href: "/admin/analytics",
+          },
+          {
+            label: "Emails",
+            href: "/admin/emails",
+          },
+          {
+            label: "Notifications",
+            href: "/admin/notifications",
+          },
+        ];
+
+      case "DEVELOPER":
+        return [
+          {
+            label: "Projects",
+            href: "/developer/projects",
+          },
+          {
+            label: "Files",
+            href: "/developer/files",
+          },
+          {
+            label: "Support",
+            href: "/developer/support",
+          },
+          {
+            label: "Notifications",
+            href: "/developer/notifications",
+          },
+        ];
+
+      case "SELLER":
+        return [
+          {
+            label: "Projects",
+            href: "/seller/projects",
+          },
+          {
+            label: "Files",
+            href: "/seller/files",
+          },
+          {
+            label: "Support",
+            href: "/seller/support",
+          },
+          {
+            label: "Notifications",
+            href: "/seller/notifications",
+          },
+        ];
+
+      case "CLIENT":
+        return [
+          {
+            label: "Projects",
+            href: "/client/projects",
+          },
+          {
+            label: "Files",
+            href: "/client/files",
+          },
+          {
+            label: "Invoices",
+            href: "/client/invoices",
+          },
+          {
+            label: "Support",
+            href: "/client/support",
+          },
+          {
+            label: "Notifications",
+            href: "/client/notifications",
+          },
+        ];
+
+      default:
+        return [];
+    }
+  };
+
+  const searchItems = getSearchItems();
 
   return (
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
     >
-      <CommandInput placeholder="Search projects, clients, invoices..." />
+      <CommandInput
+        placeholder="Search navigation..."
+      />
 
       <CommandList>
         <CommandEmpty>
@@ -88,75 +222,16 @@ export function GlobalSearchDialog() {
         </CommandEmpty>
 
         <CommandGroup heading="Navigation">
-          <CommandItem
-            onSelect={() =>
-              navigate(
-                "/admin/projects"
-              )
-            }
-          >
-            Projects
-          </CommandItem>
-
-          <CommandItem
-            onSelect={() =>
-              navigate(
-                "/admin/clients"
-              )
-            }
-          >
-            Clients
-          </CommandItem>
-
-          <CommandItem
-            onSelect={() =>
-              navigate(
-                "/admin/invoices"
-              )
-            }
-          >
-            Invoices
-          </CommandItem>
-
-          <CommandItem
-            onSelect={() =>
-              navigate(
-                "/admin/tickets"
-              )
-            }
-          >
-            Support Tickets
-          </CommandItem>
-
-          <CommandItem
-            onSelect={() =>
-              navigate(
-                "/admin/analytics"
-              )
-            }
-          >
-            Analytics
-          </CommandItem>
-
-          <CommandItem
-            onSelect={() =>
-              navigate(
-                "/admin/emails"
-              )
-            }
-          >
-            Emails
-          </CommandItem>
-
-          <CommandItem
-            onSelect={() =>
-              navigate(
-                "/admin/notifications"
-              )
-            }
-          >
-            Notifications
-          </CommandItem>
+          {searchItems.map((item) => (
+            <CommandItem
+              key={item.href}
+              onSelect={() =>
+                navigate(item.href)
+              }
+            >
+              {item.label}
+            </CommandItem>
+          ))}
         </CommandGroup>
       </CommandList>
     </CommandDialog>

@@ -1,4 +1,6 @@
-export const adminNav = [
+import type { NavItem } from "@/types/navigation";
+
+export const adminNav: NavItem[] = [
   {
     title: "Dashboard",
     url: "/admin/",
@@ -18,6 +20,11 @@ export const adminNav = [
     title: "Projects",
     url: "/admin/projects",
     icon: "projects",
+  },
+  {
+    title: "Tasks",
+    url: "/admin/tasks",
+    icon: "briefcase",
   },
   {
     title: "Support",
@@ -69,4 +76,41 @@ export const adminNav = [
     url: "/admin/settings",
     icon: "settings",
   },
+
+
+  
+];
+
+export const developerNav = [
+  {
+    title: "Dashboard",
+    url: "/developer/",
+    icon: "dashboard",
+  },
+    {
+  title: "Tasks",
+  url: "/developer/tasks",
+  icon: "briefcase",
+},
+  {
+    title: "Projects",
+    url: "/developer/projects",
+    icon: "projects",
+  },
+  {
+    title: "Support",
+    url: "/developer/support",
+    icon: "support",
+  },
+  {
+    title: "Files",
+    url: "/developer/files",
+    icon: "files",
+  },
+  {
+    title: "Notifications",
+    url: "/developer/notifications",
+    icon: "bell",
+  },
+  
 ] as const;

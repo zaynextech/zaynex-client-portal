@@ -1,69 +1,65 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
 import { createClient } from "@/lib/supabase/server";
 
-export async function makeAdmin(
-  userId: string
-) {
-  const supabase =
-    await createClient();
+const SUPER_ADMIN_EMAIL = "gkasmiro@gmail.com";
+
+export type UserRole =
+  | "ADMIN"
+  | "DEVELOPER"
+  | "SELLER"
+  | "CLIENT";
+
+async function authorizeSuperAdmin() {
+  const supabase = await createClient();
 
   const {
     data: { user },
-  } =
-    await supabase.auth.getUser();
+  } = await supabase.auth.getUser();
 
-  if (
-    user?.email !==
-    "gkasmiro@gmail.com"
-  ) {
-    throw new Error(
-      "Unauthorized"
-    );
+  if (!user || user.email !== SUPER_ADMIN_EMAIL) {
+    throw new Error("Unauthorized");
   }
 
-  await supabase
-    .from("profiles")
-    .update({
-      role: "ADMIN",
-    })
-    .eq("id", userId);
-
-  revalidatePath(
-    "/admin/admins"
-  );
+  return supabase;
 }
 
-export async function removeAdmin(
-  userId: string
+export async function updateUserRole(
+  userId: string,
+  role: UserRole
 ) {
-  const supabase =
-    await createClient();
+  const supabase = await authorizeSuperAdmin();
 
-  const {
-    data: { user },
-  } =
-    await supabase.auth.getUser();
+  // Get target user's email
+  const { data: targetUser, error: targetError } =
+    await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .single();
 
-  if (
-    user?.email !==
-    "gkasmiro@gmail.com"
-  ) {
+  if (targetError) {
+    throw new Error(targetError.message);
+  }
+
+  // Protect the main administrator
+  if (targetUser?.email === SUPER_ADMIN_EMAIL) {
     throw new Error(
-      "Unauthorized"
+      "The Super Admin role cannot be changed."
     );
   }
 
-  await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({
-      role: "CLIENT",
+      role,
     })
     .eq("id", userId);
 
-  revalidatePath(
-    "/admin/admins"
-  );
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/admins");
 }

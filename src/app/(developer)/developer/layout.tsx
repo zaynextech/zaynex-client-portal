@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
-import { adminNav } from "@/lib/navigation";
+import { developerNav } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function AdminLayout({
+export default async function DeveloperLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -31,35 +30,24 @@ export default async function AdminLayout({
     redirect("/auth/login");
   }
 
-  const role = profile.role?.toUpperCase();
-
-  // ADMIN ONLY
-  if (role !== "ADMIN") {
-    if (role === "DEVELOPER") {
-      redirect("/developer");
-    }
-
-    if (role === "SELLER") {
-      redirect("/seller");
-    }
-
+  if (profile.role?.toUpperCase() !== "DEVELOPER") {
     redirect("/client");
   }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       <AppSidebar
-        title="Zaynex Admin"
-        items={adminNav}
+        title="Zaynex Developer"
+        items={developerNav}
       />
 
-      <div className="flex min-w-0 h-full flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader
-          title="Admin Dashboard"
+          title="Developer Dashboard"
           sidebar={
             <MobileSidebar
-              title="Zaynex Admin"
-              items={adminNav}
+              title="Zaynex Developer"
+              items={developerNav}
             />
           }
         />

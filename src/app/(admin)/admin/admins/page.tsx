@@ -1,49 +1,30 @@
-import { redirect } from "next/navigation";
-
 import { createClient } from "@/lib/supabase/server";
-
+import { AdminTable } from "@/features/admins/components/admin-table";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
-import { AdminTable } from "@/features/admins/components/admin-table";
 
 export default async function AdminsPage() {
-  const supabase =
-    await createClient();
+  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } =
-    await supabase.auth.getUser();
+  const { data: users, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role")
+    .order("full_name", {
+      ascending: true,
+    });
 
-  if (
-    user?.email !==
-    "gkasmiro@gmail.com"
-  ) {
-    redirect("/admin");
+  if (error) {
+    throw new Error(error.message);
   }
-
-  const { data: admins } =
-  await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "ADMIN");
-
-const { data: clients } =
-  await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "CLIENT");
 
   return (
     <PageContainer>
       <PageHeader
-        title="Admin Management"
-        description="Manage platform administrators."
+        title="User Management"
+        description="Manage user roles and access permissions."
       />
-      <AdminTable
-            admins={admins ?? []}
-            clients={clients ?? []}
-            />
+
+      <AdminTable users={users ?? []} />
     </PageContainer>
   );
 }

@@ -9,10 +9,12 @@ export async function updateProjectProgress(
 ) {
   const supabase = await createClient();
 
+  const safeProgress = Math.min(Math.max(progress, 0), 100);
+
   const { error } = await supabase
     .from("projects")
     .update({
-      progress,
+      progress: safeProgress,
     })
     .eq("id", projectId);
 
@@ -20,7 +22,8 @@ export async function updateProjectProgress(
     throw new Error(error.message);
   }
 
-  revalidatePath(
-    `/admin/projects/${projectId}`
-  );
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/developer/projects/${projectId}`);
+  revalidatePath("/admin/projects");
+  revalidatePath("/developer/projects");
 }

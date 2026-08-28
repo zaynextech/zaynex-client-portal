@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-
 import { createClient } from "@/lib/supabase/server";
-
 import { generateInvoicePdf } from "@/lib/pdf/generate-invoice-pdf";
 
 interface RouteProps {
@@ -14,11 +12,9 @@ export async function GET(
   request: Request,
   { params }: RouteProps
 ) {
-  const { id } =
-    await params;
+  const { id } = await params;
 
-  const supabase =
-    await createClient();
+  const supabase = await createClient();
 
   const {
     data: invoice,
@@ -41,8 +37,7 @@ export async function GET(
   if (error || !invoice) {
     return NextResponse.json(
       {
-        error:
-          "Invoice not found",
+        error: "Invoice not found",
       },
       {
         status: 404,
@@ -50,40 +45,40 @@ export async function GET(
     );
   }
 
-  const pdfBytes =
-    await generateInvoicePdf({
-      invoiceNumber:
-        invoice.invoice_number,
-      clientName:
-        invoice.profiles
-          ?.company_name ||
-        invoice.profiles
-          ?.full_name ||
-        "Client",
-      projectName:
-        invoice.projects?.name ||
-        "Project",
-      amount:
-        Number(
-          invoice.amount
-        ),
-      issueDate:
-        invoice.issue_date,
-      dueDate:
-        invoice.due_date,
-      notes:
-        invoice.notes,
-    });
+  const pdfBytes = await generateInvoicePdf({
+    invoiceNumber: invoice.invoice_number,
 
-return new Response(
-  pdfBytes.buffer as ArrayBuffer,
-  {
+    clientName:
+      invoice.profiles?.company_name ||
+      invoice.profiles?.full_name ||
+      "Client",
+
+    projectName:
+      invoice.projects?.name ||
+      "Project",
+
+    amount: Number(invoice.amount),
+
+    issueDate:
+      invoice.issue_date || "",
+
+    dueDate:
+      invoice.due_date || null,
+
+    // IMPORTANT: Pass the actual database status
+    status:
+      invoice.status || "Pending",
+
+    notes:
+      invoice.notes || null,
+  });
+
+  return new Response(pdfBytes.buffer as ArrayBuffer, {
     headers: {
-      "Content-Type":
-        "application/pdf",
+      "Content-Type": "application/pdf",
+
       "Content-Disposition":
         `attachment; filename="${invoice.invoice_number}.pdf"`,
     },
-  }
-);
+  });
 }
