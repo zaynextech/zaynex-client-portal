@@ -11,7 +11,8 @@ type IconName =
   | "bell"
   | "mail"
   | "star"
-  | "briefcase";
+  | "briefcase"
+  | "userPlus";
 
 export interface NavItem {
   title: string;

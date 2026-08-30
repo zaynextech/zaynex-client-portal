@@ -21,6 +21,8 @@ import {
   Mail,
   Star,
   Briefcase,
+  UserPlus,
+  
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ const icons = {
   mail: Mail,
   star: Star,
   briefcase: Briefcase,
+  userPlus: UserPlus,
 } as const;
 
 interface AppSidebarProps {

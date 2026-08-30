@@ -7,7 +7,7 @@ export async function getProjects() {
     .from("projects")
     .select(`
       *,
-      client:profiles(
+      client:profiles!projects_client_id_fkey(
         id,
         full_name,
         email
@@ -18,9 +18,12 @@ export async function getProjects() {
     });
 
   if (error) {
-    console.error(error);
+    console.error(
+      "GET PROJECTS ERROR:",
+      JSON.stringify(error, null, 2)
+    );
     return [];
   }
 
-  return data;
+  return data ?? [];
 }

@@ -18,6 +18,7 @@ import {
   Mail,
   Star,
   Briefcase,
+  UserPlus,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -44,7 +45,8 @@ type IconName =
   | "bell"
   | "mail"
   | "star"
-  | "briefcase";
+  | "briefcase"
+  | "userPlus";
 
 type NavItem = {
   title: string;
@@ -71,6 +73,7 @@ const icons = {
   mail: Mail,
   star: Star,
   briefcase: Briefcase,
+  userPlus: UserPlus,
 } as const;
 
 export function MobileSidebar({ title, items }: MobileSidebarProps) {

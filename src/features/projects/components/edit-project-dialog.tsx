@@ -11,6 +11,7 @@ import {
   DollarSign,
   Calendar,
   Pencil,
+  UserRound,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,13 +28,18 @@ import {
 
 import { updateProject } from "@/features/projects/actions/update-project";
 
-// Strictly aligned with Supabase `projects_status_check` constraint
 const PROJECT_STATUSES = [
   { value: "PENDING", label: "Pending" },
   { value: "IN_PROGRESS", label: "In Progress" },
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELLED", label: "Cancelled" },
 ];
+
+interface Salesperson {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+}
 
 interface EditProjectDialogProps {
   project: {
@@ -43,12 +49,18 @@ interface EditProjectDialogProps {
     status: string;
     progress: number | null;
     budget: number | null;
+    commission_rate: number | null;
     start_date: string | null;
     due_date: string | null;
+    salesperson_id: string | null;
   };
+  salespeople: Salesperson[];
 }
 
-export function EditProjectDialog({ project }: EditProjectDialogProps) {
+export function EditProjectDialog({
+  project,
+  salespeople,
+}: EditProjectDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -58,9 +70,18 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
   const [status, setStatus] = useState(project.status ?? "PENDING");
   const [progress, setProgress] = useState(project.progress ?? 0);
   const [budget, setBudget] = useState(project.budget ?? 0);
+  const [commissionRate, setCommissionRate] = useState(
+    project.commission_rate ?? 0
+  );
+
+  const [salespersonId, setSalespersonId] = useState(
+    project.salesperson_id ?? ""
+  );
+
   const [startDate, setStartDate] = useState(
     project.start_date?.split("T")[0] ?? ""
   );
+
   const [dueDate, setDueDate] = useState(
     project.due_date?.split("T")[0] ?? ""
   );
@@ -82,8 +103,10 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
           status,
           progress: Number(progress),
           budget: Number(budget),
+          commission_rate: Number(commissionRate),
           start_date: startDate || null,
           due_date: dueDate || null,
+          salesperson_id: salespersonId || null,
         });
 
         toast.success("Project updated successfully");
@@ -91,6 +114,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
         router.refresh();
       } catch (error) {
         console.error(error);
+
         toast.error(
           error instanceof Error
             ? error.message
@@ -103,78 +127,104 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5 font-medium shadow-xs">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 font-medium shadow-xs"
+        >
           <Pencil className="h-3.5 w-3.5" />
           Edit Project
         </Button>
       </DialogTrigger>
 
-      {/* Balanced Modal Dimensions (w-[94vw] max-w-2xl) */}
-      <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border-border/80 bg-card p-6 text-card-foreground shadow-2xl sm:p-7">
-        <DialogHeader className="space-y-1.5 border-b border-border/40 pb-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <FolderKanban className="h-4.5 w-4.5" />
+      <DialogContent className="w-[95vw] sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border-border/80 bg-card p-6 text-card-foreground shadow-2xl sm:p-8">
+        <DialogHeader className="space-y-1.5 border-b border-border/40 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <FolderKanban className="h-5 w-5" />
             </div>
+
             <div>
               <DialogTitle className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
                 Edit Project Details
               </DialogTitle>
+
               <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
-                Update project information, timeline status, and budget allocations.
+                Update project information, salesperson, timeline, and budget.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSave} className="space-y-5 pt-3">
-          {/* Project Name */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              Project Name <span className="text-destructive">*</span>
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={pending}
-              required
-              placeholder="e.g. Acme Redesign & Branding"
-              className="bg-background text-foreground"
-            />
-          </div>
-
-          {/* Symmetrical 3-Column Metrics Grid: Status, Progress, Budget */}
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-            {/* Status Dropdown */}
+        <form onSubmit={handleSave} className="space-y-5 pt-4">
+          {/* Project Name & Salesperson */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                Status <span className="text-destructive">*</span>
+                Project Name <span className="text-destructive">*</span>
               </label>
+
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={pending}
+                required
+                placeholder="e.g. Acme Redesign & Branding"
+                className="bg-background text-foreground"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
+                Salesperson
+              </label>
+
+              <select
+                value={salespersonId}
+                onChange={(e) => setSalespersonId(e.target.value)}
+                disabled={pending}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">No salesperson assigned</option>
+
+                {salespeople.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.full_name?.trim() || person.email || "Unnamed Seller"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Status, Progress, Budget & Commission Rate */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold">
+                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                Status
+              </label>
+
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 disabled={pending}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:border-input dark:bg-background dark:text-foreground"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {PROJECT_STATUSES.map((item) => (
-                  <option
-                    key={item.value}
-                    value={item.value}
-                    className="bg-background text-foreground"
-                  >
+                  <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Progress */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-semibold">
                 <Percent className="h-3.5 w-3.5 text-muted-foreground" />
                 Progress ({progress}%)
               </label>
+
               <Input
                 type="number"
                 min={0}
@@ -182,16 +232,15 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                 value={progress}
                 onChange={(e) => setProgress(Number(e.target.value))}
                 disabled={pending}
-                className="bg-background text-foreground"
               />
             </div>
 
-            {/* Budget */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-semibold">
                 <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
                 Budget ($ USD)
               </label>
+
               <Input
                 type="number"
                 min={0}
@@ -199,61 +248,76 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                 value={budget}
                 onChange={(e) => setBudget(Number(e.target.value))}
                 disabled={pending}
-                className="bg-background text-foreground"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold">
+                <Percent className="h-3.5 w-3.5 text-muted-foreground" />
+                Commission (%)
+              </label>
+
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={commissionRate}
+                onChange={(e) => setCommissionRate(Number(e.target.value))}
+                disabled={pending}
               />
             </div>
           </div>
 
-          {/* Symmetrical 2-Column Dates Grid */}
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-            {/* Start Date */}
+          {/* Dates */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-semibold">
                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                 Start Date
               </label>
+
               <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 disabled={pending}
-                className="bg-background text-foreground dark:scheme-dark"
               />
             </div>
 
-            {/* Due Date */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-semibold">
                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                 Due Date
               </label>
+
               <Input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 disabled={pending}
-                className="bg-background text-foreground dark:scheme-dark"
               />
             </div>
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <label className="flex items-center gap-1.5 text-xs font-semibold">
               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
               Project Description
             </label>
+
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={pending}
               rows={4}
               placeholder="Outline project scope, deliverables, and technical notes..."
-              className="min-h-24 resize-y bg-background text-foreground leading-relaxed"
+              className="resize-y bg-background text-foreground"
             />
           </div>
 
-          {/* Actions Bar */}
+          {/* Actions */}
           <div className="flex flex-col-reverse gap-2 border-t border-border/40 pt-4 sm:flex-row sm:justify-end">
             <Button
               type="button"
@@ -264,6 +328,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
             >
               Cancel
             </Button>
+
             <Button
               type="submit"
               disabled={pending}

@@ -138,23 +138,38 @@ export default async function ProjectPage({ params }: PageProps) {
   const supabase = await createClient();
 
   // 1. Fetch primary project record
-  const { data: project } = await supabase
-    .from("projects")
-    .select(`
-      *,
-      client:profiles(
-        id,
-        full_name,
-        email,
-        company_name
-      )
-    `)
-    .eq("id", id)
-    .single();
+  const { data: project, error: projectError } = await supabase
+  .from("projects")
+  .select(`
+    *,
+    client:profiles!projects_client_id_fkey(
+      id,
+      full_name,
+      email,
+      company_name
+    ),
+    salesperson:profiles!projects_salesperson_id_fkey(
+      id,
+      full_name,
+      email
+    )
+  `)
+  .eq("id", id)
+  .single();
 
-  if (!project) {
-    notFound();
-  }
+if (projectError) {
+  console.error("GET PROJECT ERROR:", projectError);
+}
+
+if (!project) {
+  notFound();
+}
+
+  const { data: salespeople } = await supabase
+  .from("profiles")
+  .select("id, full_name, email")
+  .eq("role", "SELLER")
+  .order("full_name", { ascending: true });
 
   // 2. Fetch all dependent collections in parallel
   const [
@@ -212,7 +227,10 @@ export default async function ProjectPage({ params }: PageProps) {
         description="Manage project details, timeline milestones, tasks, files, and internal notes."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <EditProjectDialog project={project} />
+            <EditProjectDialog
+                project={project}
+                salespeople={salespeople ?? []}
+              />
             <DeleteProjectButton projectId={project.id} />
           </div>
         }
@@ -321,6 +339,35 @@ export default async function ProjectPage({ params }: PageProps) {
                 </p>
                 <p className="truncate text-sm font-semibold text-foreground">
                   {project.client?.full_name ?? "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/20 p-3.5">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <User className="h-4 w-4" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Salesperson
+                </p>
+
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {project.salesperson?.full_name ??
+                    project.salesperson?.email ??
+                    "Unassigned"}
+
+                  {project.salesperson && (
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      ({Number(project.commission_rate ?? 0)}% — $
+                      {(
+                        (Number(project.budget ?? 0) *
+                          Number(project.commission_rate ?? 0)) /
+                        100
+                      ).toLocaleString()})
+                    </span>
+                  )}
                 </p>
               </div>
             </div>

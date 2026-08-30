@@ -1,11 +1,46 @@
 import type { NavItem } from "@/types/navigation";
 
+
+export const salesNav = [
+  {
+    title: "Dashboard",
+    url: "/sales/",
+    icon: "dashboard",
+  },
+  {
+    title: "Leads",
+    url: "/sales/leads",
+    icon: "userPlus",
+  },
+  {
+    title: "Tasks",
+    url: "/sales/tasks",
+    icon: "briefcase",
+  },
+  {
+    title: "Resources",
+    url: "/sales/resources",
+    icon: "files",
+  },
+] as const;
+
 export const adminNav: NavItem[] = [
   {
     title: "Dashboard",
     url: "/admin/",
     icon: "dashboard",
   },
+    {
+    title: "Sales",
+    url: "/admin/sales",
+    icon: "clients",
+  },
+
+  {
+  title: "Resources",
+  url: "/admin/resources",
+  icon: "files",
+},
   {
     title: "Project Requests",
     url: "/admin/project-requests",
@@ -79,7 +114,7 @@ export const adminNav: NavItem[] = [
 
 
   
-];
+] as const;
 
 export const developerNav = [
   {
@@ -114,3 +149,4 @@ export const developerNav = [
   },
   
 ] as const;
+

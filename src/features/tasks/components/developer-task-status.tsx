@@ -40,7 +40,7 @@ export function DeveloperTaskStatus({
       }
     });
   };
-
+ 
   return (
     <div onClick={(e) => e.stopPropagation()} className="w-full min-w-0">
       <Select

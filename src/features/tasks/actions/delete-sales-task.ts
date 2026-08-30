@@ -1,18 +1,10 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-const VALID_STATUSES = [
-  "TODO",
-  "IN_PROGRESS",
-  "COMPLETED",
-] as const;
-
-export async function updateTaskStatus(
-  taskId: string,
-  status: (typeof VALID_STATUSES)[number]
-) {
+export async function deleteSalesTask(taskId: string) {
   const supabase = await createClient();
 
   const {
@@ -23,23 +15,16 @@ export async function updateTaskStatus(
     throw new Error("Unauthorized");
   }
 
-  if (!VALID_STATUSES.includes(status)) {
-    throw new Error("Invalid task status.");
-  }
-
   const { error } = await supabase
     .from("sales_tasks")
-    .update({
-      status,
-      updated_at: new Date().toISOString(),
-    })
+    .delete()
     .eq("id", taskId)
-    .eq("assigned_to", user.id);
+    .or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
 
   if (error) {
     throw new Error(error.message);
   }
 
   revalidatePath("/sales/tasks");
-  revalidatePath(`/sales/tasks/${taskId}`);
+  redirect("/sales/tasks");
 }
