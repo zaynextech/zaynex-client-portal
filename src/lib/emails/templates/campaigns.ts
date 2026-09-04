@@ -239,7 +239,6 @@ export function buildCampaignEmail({
         style="max-width:560px;margin:0 auto;"
       >
 
-        <!-- Logo -->
         <tr>
           <td style="padding:0 0 32px 0;">
             <img
@@ -254,7 +253,6 @@ export function buildCampaignEmail({
           </td>
         </tr>
 
-        <!-- Content -->
         <tr>
           <td>
 
@@ -292,7 +290,6 @@ export function buildCampaignEmail({
               ${template.intro}
             </p>
 
-            <!-- Message -->
             <div
               class="message-box"
               style="
@@ -308,7 +305,6 @@ export function buildCampaignEmail({
             ${
               includeWebsiteLink
                 ? `
-            <!-- Website Link -->
             <table
               border="0"
               cellpadding="0"
@@ -340,7 +336,6 @@ export function buildCampaignEmail({
             ${
               includeRatingLink
                 ? `
-            <!-- Review -->
             <table
               border="0"
               cellpadding="0"
@@ -389,7 +384,6 @@ export function buildCampaignEmail({
           </td>
         </tr>
 
-        <!-- Footer -->
         <tr>
           <td
             class="divider"
