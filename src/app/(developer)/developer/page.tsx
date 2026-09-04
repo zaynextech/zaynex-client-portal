@@ -18,39 +18,30 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { PageContainer } from "@/components/shared/page-container";
 import { SectionCard } from "@/components/shared/section-card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/shared/loading-button";
 
 function getPriorityBadge(priority: string) {
   switch (priority?.toUpperCase()) {
     case "URGENT":
     case "HIGH":
       return (
-        <Badge
-          variant="outline"
-          className="border-rose-500/30 bg-rose-500/10 text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400"
-        >
-          <Flame className="mr-1 h-3 w-3" />
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+          <Flame className="h-3 w-3" />
           High
-        </Badge>
+        </span>
       );
     case "MEDIUM":
       return (
-        <Badge
-          variant="outline"
-          className="border-amber-500/30 bg-amber-500/10 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400"
-        >
+        <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
           Medium
-        </Badge>
+        </span>
       );
     default:
       return (
-        <Badge
-          variant="outline"
-          className="border-muted-foreground/30 text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
-        >
+        <span className="text-[11px] font-medium text-muted-foreground">
           Low
-        </Badge>
+        </span>
       );
   }
 }
@@ -180,18 +171,14 @@ export default async function DeveloperDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <Button asChild size="sm" className="gap-1.5 font-medium shadow-xs">
-              <Link href="/developer/tasks">
-                <CheckSquare2 className="h-4 w-4" />
-                Go to Tasks
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="gap-1.5 font-medium">
-              <Link href="/developer/projects">
-                <FolderKanban className="h-4 w-4" />
-                Projects
-              </Link>
-            </Button>
+            <LoadingButton href="/developer/tasks" size="sm" className="gap-1.5 font-medium shadow-xs">
+              <CheckSquare2 className="h-4 w-4" />
+              Go to Tasks
+            </LoadingButton>
+            <LoadingButton href="/developer/projects" variant="outline" size="sm" className="gap-1.5 font-medium">
+              <FolderKanban className="h-4 w-4" />
+              Projects
+            </LoadingButton>
           </div>
         </div>
       </div>
@@ -330,7 +317,7 @@ export default async function DeveloperDashboard() {
                           <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                             {task.title}
                           </p>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             {getPriorityBadge(task.priority)}
                             <span className="flex items-center gap-1 text-[11px]">
                               <Calendar className="h-3 w-3" />
@@ -351,16 +338,11 @@ export default async function DeveloperDashboard() {
                       </div>
 
                       <div className="flex items-center justify-between sm:justify-end gap-2 border-t border-border/40 pt-2 sm:border-0 sm:pt-0">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] font-semibold uppercase ${
-                            isInProgress
-                              ? "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {task.status.replace("_", " ")}
-                        </Badge>
+                        <span className={`text-[11px] font-medium capitalize ${
+                          isInProgress ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"
+                        }`}>
+                          {task.status.toLowerCase().replace("_", " ")}
+                        </span>
                         <Button asChild size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground">
                           <Link href={`/developer/projects/${task.project_id}`}>
                             <ArrowUpRight className="h-4 w-4" />
@@ -421,9 +403,9 @@ export default async function DeveloperDashboard() {
                               {project.description || "Active production client workspace"}
                             </p>
                           </div>
-                          <Badge variant="outline" className="shrink-0 text-[10px] font-semibold uppercase">
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase shrink-0">
                             {project.status}
-                          </Badge>
+                          </span>
                         </div>
                       </div>
 

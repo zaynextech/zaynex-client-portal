@@ -66,8 +66,7 @@ export async function updateTimelineStatus(
       : 0;
 
   // Auto determine project status
-  let projectStatus =
-    "PLANNING";
+  let projectStatus = "PENDING";
 
   if (progress === 100) {
     projectStatus =
