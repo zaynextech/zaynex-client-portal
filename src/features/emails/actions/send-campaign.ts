@@ -1,13 +1,9 @@
-// src/features/emails/actions/send-campaign.ts
-
 "use server";
 
 import { revalidatePath } from "next/cache";
-
 import { createClient } from "@/lib/supabase/server";
-
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
-
 import {
   buildCampaignEmail,
   type CampaignType,
@@ -16,226 +12,264 @@ import {
 interface SendCampaignInput {
   campaignType: string;
   audience: string;
+  selectedContacts?: string[];
+  selectedRole?: string;
   title: string;
   message: string;
   includeRatingLink: boolean;
   includeWebsiteLink: boolean;
 }
 
+const getEmails = (data: { email: string | null }[] | null) =>
+  (data ?? [])
+    .map((item) => item.email)
+    .filter((email): email is string => Boolean(email));
+
 export async function sendCampaign({
   campaignType,
   audience,
+  selectedContacts = [],
+  selectedRole,
   title,
   message,
   includeRatingLink,
   includeWebsiteLink,
 }: SendCampaignInput) {
-  const supabase =
-    await createClient();
+  // Check logged-in user
+  const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error(
-      "Unauthorized"
-    );
+    throw new Error("Unauthorized");
   }
 
+  // Get recipients
   let emails: string[] = [];
 
   switch (audience) {
+    // SELECTED PEOPLE
+    case "INDIVIDUALS": {
+      if (selectedContacts.length === 0) {
+        throw new Error("Please select at least one recipient");
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("email")
+        .in("id", selectedContacts);
+
+      if (error) {
+        console.error("Selected recipients error:", error);
+        throw new Error("Failed to find selected recipients");
+      }
+
+      emails = getEmails(data);
+      break;
+    }
+
+    // SELECT BY ROLE
+    case "ROLE": {
+      if (!selectedRole) {
+        throw new Error("Please select a role");
+      }
+
+      const allowedRoles = [
+        "CLIENT",
+        "DEVELOPER",
+        "SALES",
+        "ADMIN",
+      ];
+
+      if (!allowedRoles.includes(selectedRole)) {
+        throw new Error("Invalid role");
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("email")
+        .eq("role", selectedRole);
+
+      if (error) {
+        console.error("Role recipients error:", error);
+        throw new Error("Failed to find recipients");
+      }
+
+      emails = getEmails(data);
+      break;
+    }
+
+    // EVERYONE
     case "ALL_CONTACTS": {
-      const { data } =
-        await supabase
-          .from("profiles")
-          .select("email");
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("email");
 
-      emails =
-        data
-          ?.map(
-            (item) =>
-              item.email
-          )
-          .filter(
-            Boolean
-          ) ?? [];
+      if (error) {
+        console.error("All contacts error:", error);
+        throw new Error("Failed to find contacts");
+      }
 
+      emails = getEmails(data);
       break;
     }
 
+    // NEWSLETTER SUBSCRIBERS
     case "SUBSCRIBERS": {
-      const { data } =
-        await supabase
-          .from(
-            "newsletter_subscribers"
-          )
-          .select("email")
-          .eq(
-            "active",
-            true
-          );
+      const { data, error } = await supabaseAdmin
+        .from("newsletter_subscribers")
+        .select("email")
+        .eq("active", true);
 
-      emails =
-        data
-          ?.map(
-            (item) =>
-              item.email
-          )
-          .filter(
-            Boolean
-          ) ?? [];
+      if (error) {
+        console.error("Subscribers error:", error);
+        throw new Error("Failed to find subscribers");
+      }
 
+      emails = getEmails(data);
       break;
     }
 
+    // CLIENTS
     case "CLIENTS": {
-      const { data } =
-        await supabase
-          .from("profiles")
-          .select(
-            "email"
-          )
-          .eq(
-            "role",
-            "CLIENT"
-          );
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("email")
+        .eq("role", "CLIENT");
 
-      emails =
-        data
-          ?.map(
-            (item) =>
-              item.email
+      if (error) {
+        console.error("Clients error:", error);
+        throw new Error("Failed to find clients");
+      }
+
+      emails = getEmails(data);
+      break;
+    }
+
+    // CLIENTS WITH PROJECTS
+    case "CLIENTS_WITH_PROJECTS": {
+      const { data, error } = await supabaseAdmin
+        .from("projects")
+        .select(`
+          client:profiles(
+            email
           )
-          .filter(
-            Boolean
-          ) ?? [];
+        `);
+
+      if (error) {
+        console.error(
+          "Clients with projects error:",
+          error
+        );
+
+        throw new Error(
+          "Failed to find clients with projects"
+        );
+      }
+
+      emails = (
+        (data ?? []) as {
+          client:
+            | {
+                email: string | null;
+              }[]
+            | null;
+        }[]
+      )
+        .flatMap((project) => project.client ?? [])
+        .map((client) => client.email)
+        .filter(
+          (email): email is string => Boolean(email)
+        );
 
       break;
     }
-case "CLIENTS_WITH_PROJECTS": {
-  const { data } =
-    await supabase
-      .from("projects")
-      .select(`
-        client:profiles(
-          email
-        )
-      `);
 
-  emails = (
-    (data ?? []) as {
-      client:
-        | {
-            email: string | null;
-          }[]
-        | null;
-    }[]
-  )
-    .flatMap(
-      (project) =>
-        project.client ?? []
-    )
-    .map(
-      (client) =>
-        client.email
-    )
-    .filter(
-      (
-        email
-      ): email is string =>
-        Boolean(email)
-    );
-
-  break;
-}
-
+    // CLIENTS WITHOUT PROJECTS
     case "CLIENTS_WITHOUT_PROJECTS": {
       const {
         data: clients,
-      } =
-        await supabase
-          .from("profiles")
-          .select(`
-            id,
-            email
-          `)
-          .eq(
-            "role",
-            "CLIENT"
-          );
+        error: clientsError,
+      } = await supabaseAdmin
+        .from("profiles")
+        .select("id, email")
+        .eq("role", "CLIENT");
+
+      if (clientsError) {
+        console.error(
+          "Clients without projects error:",
+          clientsError
+        );
+
+        throw new Error("Failed to find clients");
+      }
 
       const {
         data: projects,
-      } =
-        await supabase
-          .from("projects")
-          .select(
-            "client_id"
-          );
+        error: projectsError,
+      } = await supabaseAdmin
+        .from("projects")
+        .select("client_id");
 
-      const clientIds =
-        new Set(
-          projects?.map(
-            (
-              project
-            ) =>
-              project.client_id
-          ) ?? []
+      if (projectsError) {
+        console.error(
+          "Projects lookup error:",
+          projectsError
         );
+
+        throw new Error("Failed to find projects");
+      }
+
+      const clientIds = new Set(
+        projects?.map(
+          (project) => project.client_id
+        ) ?? []
+      );
 
       emails =
         clients
           ?.filter(
-            (
-              client
-            ) =>
-              !clientIds.has(
-                client.id
-              )
+            (client) =>
+              !clientIds.has(client.id)
           )
-          .map(
-            (
-              client
-            ) =>
-              client.email
-          )
+          .map((client) => client.email)
           .filter(
-            Boolean
+            (email): email is string =>
+              Boolean(email)
           ) ?? [];
 
       break;
     }
 
     default:
-      throw new Error(
-        "Invalid audience"
-      );
+      throw new Error("Invalid audience");
   }
 
+  // Remove empty and duplicate emails
   emails = [
-    ...new Set(emails),
+    ...new Set(
+      emails
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean)
+    ),
   ];
 
-  if (
-    emails.length === 0
-  ) {
-    throw new Error(
-      "No recipients found"
-    );
+  if (emails.length === 0) {
+    throw new Error("No recipients found");
   }
 
-  const emailContent =
-    buildCampaignEmail({
-      type:
-        campaignType as CampaignType,
-      title,
-      message,
-      includeRatingLink,
-      includeWebsiteLink,
-    });
+  // Build email
+  const emailContent = buildCampaignEmail({
+    type: campaignType as CampaignType,
+    title,
+    message,
+    includeRatingLink,
+    includeWebsiteLink,
+  });
 
+  // Send emails in batches
   const batchSize = 50;
 
   for (
@@ -243,50 +277,55 @@ case "CLIENTS_WITH_PROJECTS": {
     i < emails.length;
     i += batchSize
   ) {
-    const batch =
-      emails.slice(
-        i,
-        i + batchSize
-      );
+    const batch = emails.slice(
+      i,
+      i + batchSize
+    );
 
-    await resend.emails.send({
-      from:
-        "Zaynex <contact@zaynex.tech>",
+    const { error } = await resend.emails.send({
+      from: "Zaynex <contact@zaynex.tech>",
       to: batch,
-      subject:
-        emailContent.subject,
-      html:
-        emailContent.html,
+      subject: emailContent.subject,
+      html: emailContent.html,
     });
+
+    if (error) {
+      console.error("Resend error:", error);
+
+      throw new Error(
+        "Failed to send email"
+      );
+    }
   }
 
-  await supabase
-    .from(
-      "email_campaigns"
-    )
-    .insert({
-      title,
-      campaign_type:
-        campaignType,
-      audience,
-      message,
-      include_rating_link:
-        includeRatingLink,
-      include_website_link:
-        includeWebsiteLink,
-      sent_count:
-        emails.length,
-      created_by:
-        user.id,
-    });
+  // Save campaign history
+  const { error: campaignError } =
+    await supabase
+      .from("email_campaigns")
+      .insert({
+        title,
+        campaign_type: campaignType,
+        audience,
+        message,
+        include_rating_link:
+          includeRatingLink,
+        include_website_link:
+          includeWebsiteLink,
+        sent_count: emails.length,
+        created_by: user.id,
+      });
 
-  revalidatePath(
-    "/admin/emails"
-  );
+  if (campaignError) {
+    console.error(
+      "Campaign history error:",
+      campaignError
+    );
+  }
+
+  revalidatePath("/admin/emails");
 
   return {
     success: true,
-    sentCount:
-      emails.length,
+    sentCount: emails.length,
   };
 }
