@@ -157,10 +157,19 @@ export function buildCampaignEmail({
 
   const subject = title || template.subject;
   const heading = title || template.heading;
-
   const greeting = recipientName
     ? `Hello ${recipientName},`
     : "Hello,";
+
+  const formattedMessage = message
+    .trim()
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map(
+      (paragraph) =>
+        `<p style="margin:0 0 16px 0;">${paragraph.replace(/\n/g, "<br>")}</p>`
+    )
+    .join("");
 
   return {
     subject,
@@ -299,7 +308,7 @@ export function buildCampaignEmail({
                 line-height:1.6;
               "
             >
-              ${message}
+              ${formattedMessage}
             </div>
 
             ${
